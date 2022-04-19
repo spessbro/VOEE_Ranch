@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <WorldObjectDef ParentName="OutpostBase">
+    <defName>Outpost_Ranch</defName>
+    <label>ranch</label>
+    <description>Places a temporary, autonomously-led camp that specializes in raising and butchering animals. Once an ample amount of meat, leather and animal products are collected, a delivery will be made at the outskirts of a faction's primary colony.</description>
+    <worldObjectClass>VOEE.Outpost_Ranching</worldObjectClass>
+    <expandingIconTexture>WorldObjects/OutpostRanch</expandingIconTexture>
+    <modExtensions>
+      <li Class="Outposts.OutpostExtension_Choose">
+        <ProvidedFood>MealFine_Meat</ProvidedFood>
+        <DisallowedBiomes>
+          <li>Desert</li>
+          <li>ExtremeDesert</li>
+        </DisallowedBiomes>
+        <DisplaySkills>
+          <li>Animals</li>
+        </DisplaySkills>
+        <ChooseLabel>Animals {0}</ChooseLabel>
+        <ChooseDesc>Choose what animal to raise at this outpost</ChooseDesc>
+      </li>
+      <li Class="KCSG.CustomGenOption">
+        <useStructureLayout>True</useStructureLayout>
+        <chooseFromlayouts>
+          <li>VOEE_Structure_Ranch</li>
+        </chooseFromlayouts>
+        <fullClear>true</fullClear>
+      </li>
+    </modExtensions>
+  </WorldObjectDef>
+</Defs>
