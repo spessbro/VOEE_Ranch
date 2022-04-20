@@ -13,6 +13,7 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp" />
     <Reference Include="Outposts" />
+    <Reference Include="VFECore" />
     <Reference Include="UnityEngine.CoreModule" />
     <Reference Include="System.Core">
       <HintPath>/snap/dotnet-sdk/162/shared/Microsoft.NETCore.App/6.0.4/System.Core.dll</HintPath>
