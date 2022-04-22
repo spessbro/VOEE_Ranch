@@ -10,12 +10,14 @@ using Verse;
 
 namespace VOEE;
 
-public class Outpost_Ranching : Outpost_ChooseResult
+public class Outpost_Ranching : Outpost
 {
 [PostToSetings("Outposts.Settings.BodySize", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
 public float BodySize = 1f;
 [PostToSetings("Outposts.Settings.HungerRate", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
 public float HungerRate = 1f;
+[PostToSetings("Outposts.Settings.Wildness", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
+public float Wildness = 1f;
 
 [PostToSetings("Outposts.Settings.Leather", PostToSetingsAttribute.DrawMode.Percentage, 0.5f, 0.01f, 2f, null, null)]
 public float Leather = 0.5f;
@@ -39,72 +41,88 @@ public float Other = 0.5f;
 public float ProductionMultiplier = 0.5f;
 [PostToSetings("Outposts.Settings.Count", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 5f, null, null)]
 public float CountMultiplier = 1f;
+
+private ThingDef animalRaised;
+private float CurrentAnimals;
+private int MaxAnimals;
+
+	private int TimeFromConceptionTilAdult(ThingDef race){
+		return (int)((race.race?.gestationPeriodDays==null ?
+					race.GetCompProperties<CompProperties_EggLayer>() == null ?
+						 0 :
+/*egg time*/			 	race.GetCompProperties<CompProperties_EggLayer>().eggFertilizedDef.GetCompProperties<CompProperties_Hatcher>().hatcherDaystoHatch :
+						 	race.race.gestationPeriodDays)
+				+race.race.lifeStageAges.Last().minAge*60);
+	}
+	private int AverageOffspringCount(ThingDef race){
+		return (int)( race.HasComp(typeof(CompEggLayer)) ?
+			 	race.GetCompProperties<CompProperties_EggLayer> ().eggCountRange.Average :
+			 	race.race.litterSizeCurve == null ?
+			 		1 :
+			 		Rand.ByCurveAverage(race.race.litterSizeCurve));
+	}
+
 public override List<ResultOption> ResultOptions
 	{
 
 		get
 		{
-			ResultOption resultOption = base.ResultOptions.FirstOrDefault();
-			if (resultOption?.Thing == null)
-			{
-				return new List<ResultOption>();
-			}
-			List <ResultOption> outy = new List<ResultOption>
-			{
-				new ResultOption
-				{
-					Thing = (resultOption.Thing.race.leatherDef ?? ThingDefOf.Leather_Plain),
-					BaseAmount = (int)(ProductionMultiplier * Leather * StatExtension.GetStatValueAbstract((BuildableDef)(object)resultOption.Thing, StatDefOf.LeatherAmount, (ThingDef)null) * (float)resultOption.BaseAmount * (resultOption.Thing.HasComp(typeof(CompEggLayer)) ?  resultOption.Thing.GetCompProperties<CompProperties_EggLayer> ().eggCountRange.Average : resultOption.Thing.race.litterSizeCurve == null ? 1 : Rand.ByCurveAverage(resultOption.Thing.race.litterSizeCurve)) * 0.5 * 15/ ((resultOption.Thing.race?.gestationPeriodDays==null ? resultOption.Thing.GetCompProperties<CompProperties_EggLayer>() == null ? 0 : resultOption.Thing.GetCompProperties<CompProperties_EggLayer>().eggFertilizedDef.GetCompProperties<CompProperties_Hatcher>().hatcherDaystoHatch : resultOption.Thing.race.gestationPeriodDays)+resultOption.Thing.race.lifeStageAges.Last().minAge*60))
-
-				},
-				new ResultOption
-				{
-					Thing = (resultOption.Thing.race.meatDef ?? ThingDefOf.Cow.race.meatDef ?? ThingDefOf.Meat_Human),
-					BaseAmount = (int)(ProductionMultiplier * Meat * StatExtension.GetStatValueAbstract((BuildableDef)(object)resultOption.Thing, StatDefOf.MeatAmount, (ThingDef)null) * (float)resultOption.BaseAmount * (resultOption.Thing.HasComp(typeof(CompEggLayer)) ?  resultOption.Thing.GetCompProperties<CompProperties_EggLayer> ().eggCountRange.Average : resultOption.Thing.race.litterSizeCurve == null ? 1 : Rand.ByCurveAverage(resultOption.Thing.race.litterSizeCurve)) * 0.5 * 15/ ((resultOption.Thing.race?.gestationPeriodDays==null ? resultOption.Thing.GetCompProperties<CompProperties_EggLayer>() == null ? 0 : resultOption.Thing.GetCompProperties<CompProperties_EggLayer>().eggFertilizedDef.GetCompProperties<CompProperties_Hatcher>().hatcherDaystoHatch : resultOption.Thing.race.gestationPeriodDays)+resultOption.Thing.race.lifeStageAges.Last().minAge*60))
-
+			List <ResultOption> outy = new List<ResultOption>();
+			if(CurrentAnimals > MaxAnimals){
+				if(StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.LeatherAmount, null) > 0){
+					outy.Add(new ResultOption{
+							Thing = (animalRaised.race.leatherDef ?? ThingDefOf.Leather_Plain),
+							BaseAmount = (int)(ProductionMultiplier * Leather * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.LeatherAmount, (ThingDef)null) * (CurrentAnimals-MaxAnimals))
+							});
+						}
+				if(StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.MeatAmount, null) > 0){
+					outy.Add(new ResultOption{
+							Thing = (animalRaised.race.leatherDef ?? ThingDefOf.Leather_Plain),
+							BaseAmount = (int)(ProductionMultiplier * Meat * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.MeatAmount, (ThingDef)null) * (CurrentAnimals-MaxAnimals))
+							});
+						}
 				}
-			};
-			CompProperties_Milkable milkies = resultOption.Thing.GetCompProperties<CompProperties_Milkable>();
+			CompProperties_Milkable milkies = animalRaised.GetCompProperties<CompProperties_Milkable>();
 			if(milkies != null){
 				outy.Add(
 					new ResultOption{
 						Thing = milkies.milkDef,
-						BaseAmount = (int)(ProductionMultiplier * Milk * resultOption.BaseAmount * (milkies.milkFemaleOnly ? 0.5 : 1) * milkies.milkAmount / milkies.milkIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Milk * CurrentAnimals * (milkies.milkFemaleOnly ? 0.5 : 1) * milkies.milkAmount / milkies.milkIntervalDays * 15)
 					}
 
 
 				);
 			}
-			CompProperties_Shearable shearies = resultOption.Thing.GetCompProperties<CompProperties_Shearable>();
+			CompProperties_Shearable shearies = animalRaised.GetCompProperties<CompProperties_Shearable>();
 			if(shearies != null){
 				outy.Add(
 					new ResultOption{
 						Thing = shearies.woolDef,
-						BaseAmount = (int)(ProductionMultiplier * Wool * resultOption.BaseAmount * shearies.woolAmount / shearies.shearIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Wool * CurrentAnimals * shearies.woolAmount / shearies.shearIntervalDays * 15)
 
 					}
 
 
 				);
 			}
-			CompProperties_EggLayer eggies = resultOption.Thing.GetCompProperties<CompProperties_EggLayer>();
+			CompProperties_EggLayer eggies = animalRaised.GetCompProperties<CompProperties_EggLayer>();
 			if(eggies != null && eggies.eggProgressUnfertilizedMax == 1){
 				outy.Add(
 					new ResultOption{
 						Thing = eggies.eggUnfertilizedDef,
-						BaseAmount = (int)(ProductionMultiplier * Egg * resultOption.BaseAmount * (eggies.eggLayFemaleOnly ? 0.5 : 1)* eggies.eggCountRange.Average / eggies.eggLayIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Egg * CurrentAnimals * (eggies.eggLayFemaleOnly ? 0.5 : 1)* eggies.eggCountRange.Average / eggies.eggLayIntervalDays * 15)
 
 					}
 
 
 				);
 			}
-			AnimalBehaviours.CompProperties_AnimalProduct otheries = resultOption.Thing.GetCompProperties<AnimalBehaviours.CompProperties_AnimalProduct>();
+			AnimalBehaviours.CompProperties_AnimalProduct otheries = animalRaised.GetCompProperties<AnimalBehaviours.CompProperties_AnimalProduct>();
 			if(otheries?.resourceDef != null){
 				outy.Add(
 					new ResultOption{
 						Thing = otheries.resourceDef,
-						BaseAmount = (int)(ProductionMultiplier * Other * resultOption.BaseAmount * otheries.resourceAmount / otheries.gatheringIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Other * CurrentAnimals * otheries.resourceAmount / otheries.gatheringIntervalDays * 15)
 
 					}
 
@@ -115,19 +133,62 @@ public override List<ResultOption> ResultOptions
 		}
 	}
 
-	public override IEnumerable<ResultOption> GetExtraOptions()
-	{
-		int AnimalsSkillTotal = CapablePawns.ToList().Sum((Pawn p) => p.skills.GetSkill(SkillDefOf.Animals).Level);
-		return from pkd in (from pkd in DefDatabase<PawnKindDef>.AllDefs
-				where pkd.race?.tradeTags != null && pkd.race.tradeTags.Contains("AnimalFarm") || pkd.label=="boomalope"
-				select pkd)
-			select new ResultOption
-			{
-				Thing = pkd.race,
-				BaseAmount = (int)Math.Ceiling(CountMultiplier/(HungerRate*pkd.race.race.baseHungerRate+BodySize*pkd.race.race.baseBodySize)*AnimalsSkillTotal) //fuck rounding
-			};
+	public override void Produce(){
+		MaxAnimals = (int) Math.Ceiling(TotalSkill(SkillDefOf.Animals)*CountMultiplier/(HungerRate*animalRaised.race.baseHungerRate+BodySize*animalRaised.race.baseBodySize));
+		CurrentAnimals+= AverageOffspringCount(animalRaised)*15/TimeFromConceptionTilAdult(animalRaised);
+		base.Produce();
+		CurrentAnimals = CurrentAnimals > MaxAnimals ? MaxAnimals : CurrentAnimals;
 	}
 
+
+
+	public string CanSpawnOnWith(int tile, List<Pawn> pawns) {
+		List<Caravan> C = (List<Caravan>)Find.WorldObjects.Caravans.Where(c => c.IsPlayerControlled && c.Tile == tile);
+		List<Pawn> creatorAnimals =(List<Pawn>) ((from c in C where c.ContainsPawn(pawns.FirstOrDefault()) select c).FirstOrDefault().PawnsListForReading.Where(p => p.RaceProps.Animal));
+		List<ThingDef> AnimalTypes = new List<ThingDef>();
+		foreach(Pawn a in creatorAnimals){
+			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders){
+				AnimalTypes.Add(a.def);
+			}
+		}
+		bool match = false;
+		foreach(ThingDef d in AnimalTypes){
+			if(creatorAnimals.Any(a => a.gender == Gender.Female && a.def == d) && creatorAnimals.Any(a => a.gender == Gender.Male && a.def == d)){
+				match = true;
+				break;
+			}
+		}
+
+		return match ? "VOEE.Ranch.Moses".Translate() : null;
+
+	}
+
+	public override void PostMake(){
+		base.PostMake();
+		List<ThingDef> AnimalTypes = new List<ThingDef>();
+		foreach(Pawn a in AllPawns.Where(p => p.RaceProps.Animal)){
+			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders){
+				AnimalTypes.Add(a.def);
+			}
+		}
+		foreach(ThingDef d in AnimalTypes){
+			if(((List<Pawn>)AllPawns).Any(a => a.gender == Gender.Female && a.def == d) && ((List<Pawn>)AllPawns).Any(a => a.gender == Gender.Male && a.def == d)){
+				animalRaised = d;
+				break;
+			}
+		}
+		CurrentAnimals = ((List<Pawn>)AllPawns).Where(o => o.def == animalRaised).Count();
+		IEnumerable<Pawn> lordHelpMe = ((List<Pawn>)AllPawns).Where(o => o.def != animalRaised);
+		((List<Pawn>)AllPawns).Clear();
+		((List<Pawn>)AllPawns).InsertRange(0,lordHelpMe);
+	}
+
+	public override void Tick(){
+	if(AllPawns.Any(o => o.def ==animalRaised)){
+			CurrentAnimals = AllPawns.Where(o => o.def == animalRaised).Count();
+			((List<Pawn>)AllPawns).RemoveAll(o => o.def == animalRaised);
+		}
+	}
 }
 
 
