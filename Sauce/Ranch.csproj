@@ -21,7 +21,6 @@
     <Reference Include="System.Xml">
       <HintPath>/snap/dotnet-sdk/162/shared/Microsoft.NETCore.App/6.0.4/System.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="0Harmony" />
     <Reference Include="System" />
   </ItemGroup>
 </Project>

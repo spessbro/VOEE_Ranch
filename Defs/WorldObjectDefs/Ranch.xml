@@ -16,8 +16,8 @@
         <DisplaySkills>
           <li>Animals</li>
         </DisplaySkills>
-        <ChooseLabel>Animals {0}</ChooseLabel>
-        <ChooseDesc>Choose what animal to raise at this outpost</ChooseDesc>
+		<RequiresGrowing>true</RequiresGrowing>
+		<Event>VOE_JoinHuntingOutpost</Event>
       </li>
       <li Class="KCSG.CustomGenOption">
         <useStructureLayout>True</useStructureLayout>

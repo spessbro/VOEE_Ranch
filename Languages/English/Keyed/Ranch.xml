@@ -10,5 +10,6 @@
 	<Outposts.Settings.HungerRate>Hunger Rate Importance</Outposts.Settings.HungerRate>
 	<Outposts.Settings.BodySize>Body Size Importance</Outposts.Settings.BodySize>
 	<VOEE.Ranch.Moses>You need one male and one female of the animal you wish to raise</VOEE.Ranch.Moses>
-
+	<VOEE.Ranch.HerdSize>Current herd size: {0}</VOEE.Ranch.HerdSize>
+	<VOEE.Ranch.MaxHerdSize>Maximum herd size: {0}</VOEE.Ranch.MaxHerdSize>
 </LanguageData>

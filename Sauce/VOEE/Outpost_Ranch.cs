@@ -9,15 +9,16 @@ using UnityEngine;
 using Verse;
 
 namespace VOEE;
-
 public class Outpost_Ranching : Outpost
 {
+[PostToSetings("Outposts.Setting.AllowNonGrazers", PostToSetingsAttribute.DrawMode.Checkbox,false)]
+public static bool AllowNonGrazers = false;
 [PostToSetings("Outposts.Settings.BodySize", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
 public float BodySize = 1f;
 [PostToSetings("Outposts.Settings.HungerRate", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
 public float HungerRate = 1f;
-[PostToSetings("Outposts.Settings.Wildness", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
-public float Wildness = 1f;
+//[PostToSetings("Outposts.Settings.Wildness", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 2f, null, null)]
+//public float Wildness = 1f;
 
 [PostToSetings("Outposts.Settings.Leather", PostToSetingsAttribute.DrawMode.Percentage, 0.5f, 0.01f, 2f, null, null)]
 public float Leather = 0.5f;
@@ -37,14 +38,19 @@ public float Egg = 0.5f;
 [PostToSetings("Outposts.Settings.OtherProduct", PostToSetingsAttribute.DrawMode.Percentage, 0.5f, 0.01f, 2f, null, null)]
 public float Other = 0.5f;
 
+
+
 [PostToSetings("Outposts.Settings.Production", PostToSetingsAttribute.DrawMode.Percentage, 0.5f, 0.01f, 5f, null, null)]
 public float ProductionMultiplier = 0.5f;
 [PostToSetings("Outposts.Settings.Count", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 5f, null, null)]
 public float CountMultiplier = 1f;
 
+public bool BrandNew = true;
+
 private ThingDef animalRaised;
 private float CurrentAnimals;
 private int MaxAnimals;
+private float ToRaise;
 
 	private int TimeFromConceptionTilAdult(ThingDef race){
 		return (int)((race.race?.gestationPeriodDays==null ?
@@ -68,37 +74,49 @@ public override List<ResultOption> ResultOptions
 		get
 		{
 			List <ResultOption> outy = new List<ResultOption>();
-			if(CurrentAnimals > MaxAnimals){
+			int FutureAnimals = (int)Math.Ceiling(CurrentAnimals+ToRaise);
+			if(animalRaised == null){return outy;}
+			if(FutureAnimals > MaxAnimals){
 				if(StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.LeatherAmount, null) > 0){
 					outy.Add(new ResultOption{
-							Thing = (animalRaised.race.leatherDef ?? ThingDefOf.Leather_Plain),
-							BaseAmount = (int)(ProductionMultiplier * Leather * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.LeatherAmount, (ThingDef)null) * (CurrentAnimals-MaxAnimals))
-							});
-						}
+						Thing = (animalRaised.race.leatherDef ?? ThingDefOf.Leather_Plain),
+						BaseAmount = (int)(ProductionMultiplier * Leather * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.LeatherAmount, (ThingDef)null) * (FutureAnimals-MaxAnimals))
+						});
+					}
 				if(StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.MeatAmount, null) > 0){
 					outy.Add(new ResultOption{
-							Thing = (animalRaised.race.leatherDef ?? ThingDefOf.Leather_Plain),
-							BaseAmount = (int)(ProductionMultiplier * Meat * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.MeatAmount, (ThingDef)null) * (CurrentAnimals-MaxAnimals))
+						Thing = animalRaised.race.meatDef,
+						BaseAmount = (int)(ProductionMultiplier * Meat * StatExtension.GetStatValueAbstract(animalRaised, StatDefOf.MeatAmount, (ThingDef)null) * (FutureAnimals-MaxAnimals))
+						});
+					}
+				if(animalRaised.butcherProducts!=null){
+					foreach(ThingDefCountClass P in animalRaised.butcherProducts){
+
+							outy.Add(new ResultOption{
+								Thing = P.thingDef,
+								BaseAmount = (int)(ProductionMultiplier * P.count * (FutureAnimals-MaxAnimals))
 							});
 						}
+					}
 				}
 			CompProperties_Milkable milkies = animalRaised.GetCompProperties<CompProperties_Milkable>();
 			if(milkies != null){
 				outy.Add(
 					new ResultOption{
 						Thing = milkies.milkDef,
-						BaseAmount = (int)(ProductionMultiplier * Milk * CurrentAnimals * (milkies.milkFemaleOnly ? 0.5 : 1) * milkies.milkAmount / milkies.milkIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Milk * FutureAnimals * (milkies.milkFemaleOnly ? 0.5 : 1) * milkies.milkAmount / milkies.milkIntervalDays * 15)
 					}
 
 
 				);
 			}
+
 			CompProperties_Shearable shearies = animalRaised.GetCompProperties<CompProperties_Shearable>();
 			if(shearies != null){
 				outy.Add(
 					new ResultOption{
 						Thing = shearies.woolDef,
-						BaseAmount = (int)(ProductionMultiplier * Wool * CurrentAnimals * shearies.woolAmount / shearies.shearIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Wool * FutureAnimals * shearies.woolAmount / shearies.shearIntervalDays * 15)
 
 					}
 
@@ -110,7 +128,7 @@ public override List<ResultOption> ResultOptions
 				outy.Add(
 					new ResultOption{
 						Thing = eggies.eggUnfertilizedDef,
-						BaseAmount = (int)(ProductionMultiplier * Egg * CurrentAnimals * (eggies.eggLayFemaleOnly ? 0.5 : 1)* eggies.eggCountRange.Average / eggies.eggLayIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Egg * FutureAnimals * (eggies.eggLayFemaleOnly ? 0.5 : 1)* eggies.eggCountRange.Average / eggies.eggLayIntervalDays * 15)
 
 					}
 
@@ -122,7 +140,7 @@ public override List<ResultOption> ResultOptions
 				outy.Add(
 					new ResultOption{
 						Thing = otheries.resourceDef,
-						BaseAmount = (int)(ProductionMultiplier * Other * CurrentAnimals * otheries.resourceAmount / otheries.gatheringIntervalDays * 15)
+						BaseAmount = (int)(ProductionMultiplier * Other * FutureAnimals * otheries.resourceAmount / otheries.gatheringIntervalDays * 15)
 
 					}
 
@@ -135,59 +153,82 @@ public override List<ResultOption> ResultOptions
 
 	public override void Produce(){
 		MaxAnimals = (int) Math.Ceiling(TotalSkill(SkillDefOf.Animals)*CountMultiplier/(HungerRate*animalRaised.race.baseHungerRate+BodySize*animalRaised.race.baseBodySize));
-		CurrentAnimals+= AverageOffspringCount(animalRaised)*15/TimeFromConceptionTilAdult(animalRaised);
+		ToRaise = (float)(CurrentAnimals*0.5*(AverageOffspringCount(animalRaised)*(float)15/TimeFromConceptionTilAdult(animalRaised)));
+		//Log.Message("upped to "+string.Format("{0:N3}",(CurrentAnimals+ToRaise))+" "+animalRaised.label);
 		base.Produce();
+		CurrentAnimals+= (float)(ToRaise);
 		CurrentAnimals = CurrentAnimals > MaxAnimals ? MaxAnimals : CurrentAnimals;
+		//Log.Message("Current is now :"+CurrentAnimals.ToString());
 	}
 
 
-
-	public string CanSpawnOnWith(int tile, List<Pawn> pawns) {
-		List<Caravan> C = (List<Caravan>)Find.WorldObjects.Caravans.Where(c => c.IsPlayerControlled && c.Tile == tile);
-		List<Pawn> creatorAnimals =(List<Pawn>) ((from c in C where c.ContainsPawn(pawns.FirstOrDefault()) select c).FirstOrDefault().PawnsListForReading.Where(p => p.RaceProps.Animal));
+	private static bool spawnCheck(int tile, List<Pawn> pawns){
+		List<Caravan> C = Find.WorldObjects.Caravans.Where(c => c.IsPlayerControlled && c.Tile == tile).ToList();
+		//Log.Message("Here?");
+		List<Pawn> creatorAnimals = C.Where(c => c.ContainsPawn(pawns.FirstOrDefault())).FirstOrDefault().PawnsListForReading.Where(p => p.RaceProps.Animal).ToList();
+		//Log.Message("There");
 		List<ThingDef> AnimalTypes = new List<ThingDef>();
 		foreach(Pawn a in creatorAnimals){
-			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders){
+			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders && (a.RaceProps.Eats(FoodTypeFlags.Tree) || a.RaceProps.Eats(FoodTypeFlags.Plant) || AllowNonGrazers)){
 				AnimalTypes.Add(a.def);
 			}
 		}
-		bool match = false;
 		foreach(ThingDef d in AnimalTypes){
 			if(creatorAnimals.Any(a => a.gender == Gender.Female && a.def == d) && creatorAnimals.Any(a => a.gender == Gender.Male && a.def == d)){
-				match = true;
-				break;
+				return true;
 			}
 		}
-
-		return match ? "VOEE.Ranch.Moses".Translate() : null;
-
+		return false;
 	}
 
-	public override void PostMake(){
-		base.PostMake();
+
+	public static string CanSpawnOnWith(int tile, List<Pawn> pawns) => !spawnCheck(tile,pawns) ? "VOEE.Ranch.Moses".Translate() : null;
+
+
+	public static string RequirementString(int tile, List<Pawn> pawns) => "VOEE.Ranch.Moses".Translate().Requirement(spawnCheck(tile,pawns));
+
+
+	public void Generate(){
+		List<Pawn> occupants = (List<Pawn>)AllPawns;
 		List<ThingDef> AnimalTypes = new List<ThingDef>();
-		foreach(Pawn a in AllPawns.Where(p => p.RaceProps.Animal)){
-			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders){
+		foreach(Pawn a in occupants.Where(p => p.RaceProps.Animal)){
+			if(!AnimalTypes.Contains(a.def) && a.RaceProps.hasGenders && (a.RaceProps.Eats(FoodTypeFlags.Tree) || a.RaceProps.Eats(FoodTypeFlags.Plant) || AllowNonGrazers)){
 				AnimalTypes.Add(a.def);
 			}
 		}
 		foreach(ThingDef d in AnimalTypes){
-			if(((List<Pawn>)AllPawns).Any(a => a.gender == Gender.Female && a.def == d) && ((List<Pawn>)AllPawns).Any(a => a.gender == Gender.Male && a.def == d)){
+			if((occupants).Any(a => a.gender == Gender.Female && a.def == d) && (occupants).Any(a => a.gender == Gender.Male && a.def == d)){
 				animalRaised = d;
 				break;
 			}
 		}
+		//Log.Warning(occupants.Count().ToString());
 		CurrentAnimals = ((List<Pawn>)AllPawns).Where(o => o.def == animalRaised).Count();
-		IEnumerable<Pawn> lordHelpMe = ((List<Pawn>)AllPawns).Where(o => o.def != animalRaised);
-		((List<Pawn>)AllPawns).Clear();
-		((List<Pawn>)AllPawns).InsertRange(0,lordHelpMe);
+		//Log.Message("Starting with "+CurrentAnimals.ToString()+" "+animalRaised.label);
+		((List<Pawn>)AllPawns).RemoveAll(p => p.def== animalRaised);
+		//Log.Message(((List<Pawn>)AllPawns).Count().ToString());
+		MaxAnimals = (int) Math.Ceiling(TotalSkill(SkillDefOf.Animals)*CountMultiplier/(HungerRate*animalRaised.race.baseHungerRate+BodySize*animalRaised.race.baseBodySize));
+		ToRaise = (float)(CurrentAnimals*0.5*(AverageOffspringCount(animalRaised)*15.0/TimeFromConceptionTilAdult(animalRaised)));
 	}
 
 	public override void Tick(){
-	if(AllPawns.Any(o => o.def ==animalRaised)){
-			CurrentAnimals = AllPawns.Where(o => o.def == animalRaised).Count();
-			((List<Pawn>)AllPawns).RemoveAll(o => o.def == animalRaised);
+		if(BrandNew){
+			BrandNew = false;
+			Generate();
 		}
+		if(AllPawns.Any(o => o.def ==animalRaised)){
+				CurrentAnimals = AllPawns.Where(o => o.def == animalRaised).Count();
+				((List<Pawn>)AllPawns).RemoveAll(o => o.def == animalRaised);
+			}
+		base.Tick();
+	}
+	public override string ProductionString(){
+		string outie = "VOEE.Ranch.HerdSize".Translate((int)CurrentAnimals.toString()+" "+animalRaised.label).RawText;
+		outie += "\n"+"VOEE.Ranch.MaxHerdSize".Translate((int)MaxAnimals).RawText;
+		if(base.ProductionString().Count()>0){
+			outie += "\n"+base.ProductionString();
+			}
+		return outie;
 	}
 }
 
