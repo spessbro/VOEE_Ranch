@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+	<Outposts.Settings.Leather>皮革倍數</Outposts.Settings.Leather>
+	<Outposts.Settings.Meat>肉倍數</Outposts.Settings.Meat>
+	<Outposts.Settings.Milk>奶倍數</Outposts.Settings.Milk>
+	<Outposts.Settings.Wool>毛料倍數</Outposts.Settings.Wool>
+	<Outposts.Settings.Egg>蛋倍數</Outposts.Settings.Egg>
+	<Outposts.Settings.OtherProduct>其它副產品倍數</Outposts.Settings.OtherProduct>
+	<Outposts.Settings.Count>動物數量倍數</Outposts.Settings.Count>
+	<Outposts.Settings.HungerRate>飢餓速度倍數</Outposts.Settings.HungerRate>
+	<Outposts.Settings.BodySize>體型的影響</Outposts.Settings.BodySize>
+
+</LanguageData>
