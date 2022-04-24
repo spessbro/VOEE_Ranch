@@ -7,7 +7,7 @@
     <worldObjectClass>VOEE.Outpost_Ranching</worldObjectClass>
     <expandingIconTexture>WorldObjects/OutpostRanch</expandingIconTexture>
     <modExtensions>
-      <li Class="Outposts.OutpostExtension_Choose">
+      <li Class="Outposts.OutpostExtension">
         <ProvidedFood>MealFine_Meat</ProvidedFood>
         <DisallowedBiomes>
           <li>Desert</li>
@@ -16,8 +16,11 @@
         <DisplaySkills>
           <li>Animals</li>
         </DisplaySkills>
+        <RequiredSkills>
+          <Animals>10</Animals>
+        </RequiredSkills>
 		<RequiresGrowing>true</RequiresGrowing>
-		<Event>VOE_JoinHuntingOutpost</Event>
+		<Event MayRequire="vanillaexpanded.outposts">VOE_JoinHuntingOutpost</Event>
       </li>
       <li Class="KCSG.CustomGenOption">
         <useStructureLayout>True</useStructureLayout>

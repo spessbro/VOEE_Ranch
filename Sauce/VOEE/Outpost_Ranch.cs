@@ -8,7 +8,12 @@ using RimWorld.Planet;
 using UnityEngine;
 using Verse;
 
+
+
 namespace VOEE;
+
+
+
 public class Outpost_Ranching : Outpost
 {
 [PostToSetings("Outposts.Setting.AllowNonGrazers", PostToSetingsAttribute.DrawMode.Checkbox,false)]
@@ -45,12 +50,10 @@ public float ProductionMultiplier = 0.5f;
 [PostToSetings("Outposts.Settings.Count", PostToSetingsAttribute.DrawMode.Percentage, 1f, 0.01f, 5f, null, null)]
 public float CountMultiplier = 1f;
 
-public bool BrandNew = true;
-
-private ThingDef animalRaised;
-private float CurrentAnimals;
-private int MaxAnimals;
-private float ToRaise;
+public ThingDef animalRaised;
+public float CurrentAnimals;
+public int MaxAnimals;
+public float ToRaise;
 
 	private int TimeFromConceptionTilAdult(ThingDef race){
 		return (int)((race.race?.gestationPeriodDays==null ?
@@ -212,8 +215,7 @@ public override List<ResultOption> ResultOptions
 	}
 
 	public override void Tick(){
-		if(BrandNew){
-			BrandNew = false;
+		if(animalRaised==null){
 			Generate();
 		}
 		if(AllPawns.Any(o => o.def ==animalRaised)){
@@ -223,12 +225,30 @@ public override List<ResultOption> ResultOptions
 		base.Tick();
 	}
 	public override string ProductionString(){
-		string outie = "VOEE.Ranch.HerdSize".Translate((int)CurrentAnimals.toString()+" "+animalRaised.label).RawText;
+		string outie = "VOEE.Ranch.HerdSize".Translate(((int)CurrentAnimals).ToString()+" "+animalRaised.label).RawText;
 		outie += "\n"+"VOEE.Ranch.MaxHerdSize".Translate((int)MaxAnimals).RawText;
 		if(base.ProductionString().Count()>0){
 			outie += "\n"+base.ProductionString();
 			}
 		return outie;
+	}
+
+
+	public override void ExposeData()
+	{
+		base.ExposeData();
+		Scribe_Defs.Look<ThingDef>(ref animalRaised, "animalRaised");
+		Scribe_Values.Look<float>(ref CurrentAnimals, "CurrentAnimals", 0, false);
+	}
+
+	public override void PostAdd()
+	{
+		base.PostAdd();
+		if(animalRaised != null){
+			MaxAnimals = (int) Math.Ceiling(TotalSkill(SkillDefOf.Animals)*CountMultiplier/(HungerRate*animalRaised.race.baseHungerRate+BodySize*animalRaised.race.baseBodySize));
+			ToRaise = (float)(CurrentAnimals*0.5*(AverageOffspringCount(animalRaised)*(float)15/TimeFromConceptionTilAdult(animalRaised)));
+		}
+
 	}
 }
 
